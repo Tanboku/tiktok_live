@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1A1A2E">
+
+    <!-- 1. 背景装饰层（紫色窗帘+纸花，用ImageView加载背景图） -->
+    <!-- 半透明，避免遮挡前景 -->
+    <ImageView
+        android:id="@+id/iv_host_video"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/live_main"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/rv_chat" />
+
+    <!-- 2. 左上角：主播信息（头像+名称+关注数） -->
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layout_host_info"
+        android:layout_width="170dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/avatar_sample_bg"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <!-- 主播头像（圆形） -->
+        <ImageView
+            android:id="@+id/iv_host_avatar"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginLeft="20dp"
+            android:src="@drawable/shape_circle"
+            android:background="@drawable/avatar_sample"
+            android:scaleType="centerCrop"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- 主播名称 -->
+        <TextView
+            android:id="@+id/tv_host_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="jennybush"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginStart="8dp"
+            app:layout_constraintStart_toEndOf="@+id/iv_host_avatar"
+            app:layout_constraintTop_toTopOf="@+id/iv_host_avatar" />
+
+        <!-- 关注数 -->
+        <TextView
+            android:id="@+id/tv_follower_num"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="13.4K"
+            android:textColor="@android:color/darker_gray"
+            android:textSize="12sp"
+            android:layout_marginStart="8dp"
+            app:layout_constraintStart_toEndOf="@+id/iv_host_avatar"
+            app:layout_constraintTop_toBottomOf="@+id/tv_host_name" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+    <!-- 3. 右上角：在线人数+关闭按钮 -->
+    <LinearLayout
+        android:id="@+id/layout_top_right"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/live_button">
+
+
+            <ImageView
+                android:layout_marginLeft="5dp"
+                android:layout_width="15dp"
+                android:layout_height="15dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_people" />
+
+            <!-- 在线人数（带图标） -->
+            <TextView
+                android:id="@+id/tv_online_num"
+                android:layout_width="wrap_content"
+                android:layout_height="25dp"
+                android:layout_marginRight="10dp"
+                android:text="12"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+        </LinearLayout>
+
+
+
+        <!-- 关闭按钮 -->
+        <ImageView
+            android:id="@+id/iv_close"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_close"
+            android:layout_marginStart="12dp"
+            app:layout_constraintStart_toEndOf="@+id/tv_online_num"
+            app:layout_constraintTop_toTopOf="@+id/tv_online_num"
+            app:layout_constraintBottom_toBottomOf="@+id/tv_online_num" />
+
+    </LinearLayout>
+
+
+
+
+
+    <!-- 5. 下方：公屏聊天列表 -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_chat"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="16dp"
+        android:background="#80000000"
+        android:padding="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/layout_comment" />
+
+
+    <!-- 6. 底部：评论输入框 -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layout_comment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="16dp"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+    <EditText
+        android:id="@+id/et_comment"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:textColor="@android:color/white"
+        android:background="@drawable/shape_edittext_bg"
+        android:paddingHorizontal="12dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

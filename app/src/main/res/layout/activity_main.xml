@@ -153,6 +153,7 @@
             android:layout_height="1dp"/>
 
         <LinearLayout
+            android:id="@+id/live_button_text"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:background="@drawable/live_button">
