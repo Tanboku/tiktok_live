@@ -9,14 +9,16 @@
 
     <!-- 1. 背景装饰层（紫色窗帘+纸花，用ImageView加载背景图） -->
     <!-- 半透明，避免遮挡前景 -->
-    <ImageView
-        android:id="@+id/iv_host_video"
+    <!-- 核心：视频背景（占满整个屏幕，作为最底层） -->
+    <VideoView
+        android:id="@+id/vv_live_background"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scaleType="centerCrop"
-        android:src="@drawable/live_main"
+        android:layout_gravity="center"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/rv_chat" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- 2. 左上角：主播信息（头像+名称+关注数） -->
 
@@ -125,7 +127,7 @@
 
 
 
-    <!-- 5. 下方：公屏聊天列表 -->
+    <!-- 5. 下方：公屏聊天列表（保持不变，可滚动） -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_chat"
         android:layout_width="match_parent"
@@ -134,10 +136,10 @@
         android:layout_marginBottom="16dp"
         android:background="#80000000"
         android:padding="8dp"
+        android:scrollbars="vertical"
         app:layout_constraintBottom_toTopOf="@+id/layout_comment" />
 
-
-    <!-- 6. 底部：评论输入框 -->
+    <!-- 6. 底部：评论输入框 + 发送按钮（修改后） -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layout_comment"
         android:layout_width="match_parent"
@@ -146,17 +148,33 @@
         android:layout_marginBottom="16dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
-    <EditText
-        android:id="@+id/et_comment"
-        android:layout_width="0dp"
-        android:layout_height="40dp"
-        android:textColor="@android:color/white"
-        android:background="@drawable/shape_edittext_bg"
-        android:paddingHorizontal="12dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        <!-- 评论输入框 -->
+        <EditText
+            android:id="@+id/et_comment"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:hint="输入评论..."
+            android:textColor="@android:color/white"
+            android:background="@drawable/shape_edittext_bg"
+            android:paddingHorizontal="12dp"
+            android:maxLines="1"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/btn_send"
+            app:layout_constraintTop_toTopOf="parent" />
 
+        <!-- 发送按钮 -->
+        <Button
+            android:id="@+id/btn_send"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="发送"
+            android:textColor="@android:color/white"
+            android:background="@drawable/shape_send_btn"
+            android:paddingHorizontal="20dp"
+            app:layout_constraintStart_toEndOf="@+id/et_comment"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
