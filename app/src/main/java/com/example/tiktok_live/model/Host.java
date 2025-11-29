@@ -2,7 +2,7 @@ package com.example.tiktok_live.model;
 
 import com.google.gson.annotations.SerializedName;
 
-public class Comment {
+public class Host {
     @SerializedName("id")
     private String id;
 
@@ -12,24 +12,20 @@ public class Comment {
     @SerializedName("avatar")
     private String avatar;
 
-    @SerializedName("comment")
-    private String commentContent;
+    @SerializedName("roomName")
+    private String roomName;
+
+    @SerializedName("followerNum")
+    private int followerNum;
 
     @SerializedName("createdAt")
     private String createdAt;
-
-    public Comment(String commentContent) {
-        this.commentContent = commentContent;
-        this.id = String.valueOf(System.currentTimeMillis());
-        this.name = "用户" + id;
-        this.avatar = "https://picsum.photos/200/200?random=" + id;
-        this.createdAt = "刚刚";
-    }
 
     // Getter方法
     public String getId() { return id; }
     public String getName() { return name; }
     public String getAvatar() { return avatar; }
-    public String getCommentContent() { return commentContent; }
+    public String getRoomName() { return roomName; }
+    public int getFollowerNum() { return followerNum; }
     public String getCreatedAt() { return createdAt; }
 }

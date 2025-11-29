@@ -51,7 +51,7 @@
             android:layout_height="wrap_content"
             android:text="jennybush"
             android:textColor="@android:color/white"
-            android:textSize="14sp"
+            android:textSize="10sp"
             android:textStyle="bold"
             android:layout_marginStart="8dp"
             app:layout_constraintStart_toEndOf="@+id/iv_host_avatar"
@@ -62,12 +62,17 @@
             android:id="@+id/tv_follower_num"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="13.4K"
+            android:text="99"
             android:textColor="@android:color/darker_gray"
             android:textSize="12sp"
             android:layout_marginStart="8dp"
             app:layout_constraintStart_toEndOf="@+id/iv_host_avatar"
             app:layout_constraintTop_toBottomOf="@+id/tv_host_name" />
+
+        <TextView
+            android:id="@+id/tv_host_room"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -129,7 +134,7 @@
 
     <!-- 5. 下方：公屏聊天列表（保持不变，可滚动） -->
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_chat"
+        android:id="@+id/rv_comments"
         android:layout_width="match_parent"
         android:layout_height="150dp"
         android:layout_marginHorizontal="16dp"
@@ -150,7 +155,7 @@
 
         <!-- 评论输入框 -->
         <EditText
-            android:id="@+id/et_comment"
+            android:id="@+id/et_comment_input"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:hint="输入评论..."
@@ -159,19 +164,19 @@
             android:paddingHorizontal="12dp"
             android:maxLines="1"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/btn_send"
+            app:layout_constraintEnd_toStartOf="@+id/btn_submit_comment"
             app:layout_constraintTop_toTopOf="parent" />
 
         <!-- 发送按钮 -->
         <Button
-            android:id="@+id/btn_send"
+            android:id="@+id/btn_submit_comment"
             android:layout_width="wrap_content"
             android:layout_height="48dp"
             android:text="发送"
             android:textColor="@android:color/white"
             android:background="@drawable/shape_send_btn"
             android:paddingHorizontal="20dp"
-            app:layout_constraintStart_toEndOf="@+id/et_comment"
+            app:layout_constraintStart_toEndOf="@+id/et_comment_input"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
