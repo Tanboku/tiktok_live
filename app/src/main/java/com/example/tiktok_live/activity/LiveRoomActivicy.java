@@ -78,7 +78,7 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         // 1. 初始化Host控件
         ivHostAvatar = findViewById(R.id.iv_host_avatar);
         tvHostName = findViewById(R.id.tv_host_name);
-        tvHostRoom = findViewById(R.id.tv_host_room);
+//        tvHostRoom = findViewById(R.id.tv_host_room);
 
         // 2. 初始化Comment列表
         rvComments = findViewById(R.id.rv_comments);

@@ -12,6 +12,6 @@ public class URLContent {
 
     // 评论列表API（返回数组[]）
     public static String getCommentsURL() {
-        return "https://691ec8ffbb52a1db22bf1066.mockapi.io/api/v1/comments";
+        return "https://691ec8ffbb52a1db22bf1066.mockapi.io/api/v1/comments_1";
     }
 }

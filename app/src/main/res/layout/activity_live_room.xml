@@ -69,10 +69,10 @@
             app:layout_constraintStart_toEndOf="@+id/iv_host_avatar"
             app:layout_constraintTop_toBottomOf="@+id/tv_host_name" />
 
-        <TextView
-            android:id="@+id/tv_host_room"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+<!--        <TextView-->
+<!--            android:id="@+id/tv_host_room"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content" />-->
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

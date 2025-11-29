@@ -36,8 +36,9 @@ public class HttpUtils {
             conn.setDoInput(true);
             conn.setDoOutput(false);
 
+            int responseCode = conn.getResponseCode();
             // 目标API是HTTPS，无需额外配置，系统自动处理证书
-            if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+            if (responseCode >= 200 && responseCode < 300) {
                 is = conn.getInputStream();
                 bos = new ByteArrayOutputStream();
                 byte[] buf = new byte[1024];
@@ -116,7 +117,7 @@ public class HttpUtils {
 
             // 4. 读取响应（区分成功/失败响应流）
             int responseCode = conn.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK) {
+            if (responseCode >= 200 && responseCode < 300) {
                 is = conn.getInputStream();
             } else {
                 // 错误响应也读取流（便于排查问题）
