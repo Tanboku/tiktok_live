@@ -25,6 +25,9 @@ import com.example.tiktok_live.asynctask.LoadDataAsyncTask;
 import com.example.tiktok_live.asynctask.SubmitCommentAsyncTask;
 import com.example.tiktok_live.model.Comment;
 import com.example.tiktok_live.model.URLContent;
+import com.example.tiktok_live.websocket.MessageEvent;
+import com.example.tiktok_live.websocket.OnMessageListener;
+import com.example.tiktok_live.websocket.WsManager;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -32,7 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsyncTask.OnGetNetDataListener,
-        SubmitCommentAsyncTask.OnSubmitCommentListener{
+        SubmitCommentAsyncTask.OnSubmitCommentListener, OnMessageListener {
 
     private VideoView videoView;
     private RecyclerView rvChat;
@@ -45,6 +48,7 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     private ImageView ivHostAvatar;
     private TextView tvHostName;
     private TextView tvHostRoom;
+    private TextView tvOnlionineCount;
 
     // Comment列表相关控件
     private RecyclerView rvComments;
@@ -71,6 +75,10 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         initView();
         // 同时加载两个API数据
         loadAllData();
+        // 注册WebSocket观察者
+        WsManager.getInstance().addOnMessageListener(this);
+        // 建立WebSocket连接
+        WsManager.getInstance().connect();
     }
 
 
@@ -79,12 +87,16 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         ivHostAvatar = findViewById(R.id.iv_host_avatar);
         tvHostName = findViewById(R.id.tv_host_name);
 //        tvHostRoom = findViewById(R.id.tv_host_room);
+        tvOnlionineCount = findViewById(R.id.tv_online_num);
 
         // 2. 初始化Comment列表
         rvComments = findViewById(R.id.rv_comments);
         rvComments.setLayoutManager(new LinearLayoutManager(this));
         commentAdapter = new CommentAdapter(this, new ArrayList<>());
         rvComments.setAdapter(commentAdapter);
+
+        //发送文本消息
+        WsManager.getInstance().sendText("1");
 
         // 3. 初始化刷新按钮
 //        btnRefreshAll = findViewById(R.id.btn_refresh_all);
@@ -98,6 +110,14 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         btnSubmitComment.setOnClickListener(v -> submitComment());
     }
 
+    // 接收WebSocket消息（主线程回调，可直接更新UI）
+    @Override
+    public void onMessageReceived(MessageEvent event) {
+        String newMsg = event.getMessage();
+        if (newMsg!=null){
+            tvOnlionineCount.setText((Integer.parseInt(tvOnlionineCount.getText().toString()) + 1) + "");
+        }
+    }
 
     /**
      * 同时加载两个API数据
@@ -384,5 +404,9 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         // 取消所有任务，避免内存泄漏
         if (hostTask != null) hostTask.cancelTask();
         if (commentsTask != null) commentsTask.cancelTask();
+        // 移除观察者（避免内存泄漏）
+        WsManager.getInstance().removeOnMessageListener(this);
+        // 关闭WebSocket连接
+        WsManager.getInstance().disconnect();
     }
 }

@@ -39,7 +39,6 @@
             android:layout_height="48dp"
             android:layout_marginLeft="20dp"
             android:src="@drawable/shape_circle"
-            android:background="@drawable/avatar_sample"
             android:scaleType="centerCrop"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
