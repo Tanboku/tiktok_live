@@ -274,8 +274,7 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
             public void onPrepared(MediaPlayer mediaPlayer) {
                 // 1. 基础配置：循环+静音
                 mediaPlayer.setLooping(true);
-                mediaPlayer.setVolume(0, 0);
-
+//                mediaPlayer.setVolume(0, 0);
                 // 2. 获取父布局（ConstraintLayout），等待其完成测量后再调整视频尺寸
                 View parentLayout = (View) videoView.getParent(); // 父布局是ConstraintLayout
                 parentLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
