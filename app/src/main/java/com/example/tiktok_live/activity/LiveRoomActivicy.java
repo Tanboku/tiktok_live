@@ -19,6 +19,11 @@ import android.widget.VideoView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.PlaybackException;
+import androidx.media3.common.Player;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.ui.PlayerView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -71,6 +76,11 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     private SubmitCommentAsyncTask submitCommentTask;
     private WebView webView;
 
+    private PlayerView playerView;
+    private ExoPlayer player;
+    private static final String VIDEO_URL = "https://livesim2.dashif.org/livesim2/chunkdur_1/ato_7/testpic4_8s/Manifest300.mpd";
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,6 +129,9 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
 
         // 5. 新增：提交评论按钮点击事件
         btnSubmitComment.setOnClickListener(v -> submitComment());
+
+        playerView = findViewById(R.id.player_view);
+
     }
 
     // 接收WebSocket消息（主线程回调，可直接更新UI）
@@ -288,44 +301,86 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     }
 
     private void initVideoBackground() {
-        // 绑定WebView
-        webView = findViewById(R.id.webview);
-        WebSettings webSettings = webView.getSettings();
+        // 初始化 ExoPlayer（Media3 标准 Builder 模式）
+        player = new ExoPlayer.Builder(this)
+                .setHandleAudioBecomingNoisy(true) // 音频中断时暂停（如来电）
+                .build();
 
-        // --------------- 核心配置：确保无播放限制 ---------------
-        // 1. 允许JavaScript执行（必须，播放器基于JS开发）
-        webSettings.setJavaScriptEnabled(true);
+        playerView.setPlayer(player);
 
-        // 2. 允许访问本地文件（加载assets中的脚本）
-        webSettings.setAllowFileAccess(true);
-        webSettings.setAllowFileAccessFromFileURLs(true);
-        webSettings.setAllowUniversalAccessFromFileURLs(true);
+        // 设置播放源
+        MediaItem mediaItem = MediaItem.fromUri(VIDEO_URL);
+        player.setMediaItem(mediaItem);
 
-        // 3. 允许跨域网络请求（访问DASH直播源）
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            webSettings.setAllowFileAccessFromFileURLs(true);
-        }
+        // 预加载
+        player.prepare();
 
-        // 4. 启用硬件加速（提升视频渲染性能，避免卡顿）
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        // 监听播放状态变化（修正异常回调）
+        player.addListener(new Player.Listener() {
+            @Override
+            public void onPlaybackStateChanged(int playbackState) {
+                switch (playbackState) {
+                    case Player.STATE_BUFFERING:
+                        Toast.makeText(LiveRoomActivicy.this, "缓冲中...", Toast.LENGTH_SHORT).show();
+                        break;
+                    case Player.STATE_READY:
+                        player.play(); // 自动播放
+                        break;
+                    case Player.STATE_ENDED:
+                        Toast.makeText(LiveRoomActivicy.this, "播放完成", Toast.LENGTH_SHORT).show();
+                        player.seekTo(0); // 回到开头
+                        break;
+                }
+            }
 
-        // 5. 启用DOM存储（播放器依赖本地存储）
-        webSettings.setDomStorageEnabled(true);
-        webSettings.setDatabaseEnabled(true);
+            // 关键修正：替换 PlayerException 为 PlaybackException，且回调方法签名简化
+            @Override
+            public void onPlayerError(PlaybackException error) {
+                // 可通过 error.getErrorCode() 获取具体错误类型（网络错误/格式不支持等）
+                String errorMsg = "播放失败：" + error.getMessage();
+                Toast.makeText(LiveRoomActivicy.this, errorMsg, Toast.LENGTH_LONG).show();
+            }
+        });
 
-        // 6. 禁用缓存（避免旧脚本/配置干扰）
-        webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+//        // 绑定WebView
+//        webView = findViewById(R.id.webview);
+//        WebSettings webSettings = webView.getSettings();
+//
+//        // --------------- 核心配置：确保无播放限制 ---------------
+//        // 1. 允许JavaScript执行（必须，播放器基于JS开发）
+//        webSettings.setJavaScriptEnabled(true);
+//
+//        // 2. 允许访问本地文件（加载assets中的脚本）
+//        webSettings.setAllowFileAccess(true);
+//        webSettings.setAllowFileAccessFromFileURLs(true);
+//        webSettings.setAllowUniversalAccessFromFileURLs(true);
+//
+//        // 3. 允许跨域网络请求（访问DASH直播源）
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+//            webSettings.setAllowFileAccessFromFileURLs(true);
+//        }
+//
+//        // 4. 启用硬件加速（提升视频渲染性能，避免卡顿）
+//        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+//
+//        // 5. 启用DOM存储（播放器依赖本地存储）
+//        webSettings.setDomStorageEnabled(true);
+//        webSettings.setDatabaseEnabled(true);
+//
+//        // 6. 禁用缓存（避免旧脚本/配置干扰）
+//        webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+//
+//        // 7. 允许JS打开窗口（插件可能依赖）
+//        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+//
+//        // 8. 调试模式（可选，Chrome可 inspect 调试）
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+//            webView.setWebContentsDebuggingEnabled(true);
+//        }
+//
+//        // --------------- 加载前端页面 ---------------
+//        webView.loadUrl("file:///android_asset/player.html"); // 路径必须与assets目录对应
 
-        // 7. 允许JS打开窗口（插件可能依赖）
-        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
-
-        // 8. 调试模式（可选，Chrome可 inspect 调试）
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            webView.setWebContentsDebuggingEnabled(true);
-        }
-
-        // --------------- 加载前端页面 ---------------
-        webView.loadUrl("file:///android_asset/player.html"); // 路径必须与assets目录对应
 //        videoView = findViewById(R.id.vv_live_background);
 //        Uri uri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.live_party_ing);
 //        videoView.setVideoURI(uri);
@@ -442,14 +497,24 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         etComment.setText("");
     }
 
+    // 生命周期管理（不变，确保资源释放）
+    @Override
+    protected void onStart() {
+        super.onStart();
+    }
+
     @Override
     protected void onPause() {
         super.onPause();
 //        if (videoView.isPlaying()) {
 //            videoView.pause();
 //        }
-        if (webView != null) {
-            webView.onPause(); // 暂停播放
+//        if (webView != null) {
+//            webView.onPause(); // 暂停播放
+//        }
+        if (playerView != null) playerView.onPause();
+        if (player != null && player.isPlaying()) {
+            player.pause();
         }
     }
 
@@ -459,8 +524,11 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
 //        if (!videoView.isPlaying()) {
 //            videoView.start();
 //        }
-        if (webView != null) {
-            webView.onResume(); // 恢复播放
+//        if (webView != null) {
+//            webView.onResume(); // 恢复播放
+//        }
+        if (playerView != null && !player.isPlaying()) {
+            player.play();
         }
     }
 
@@ -470,12 +538,42 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         // 取消所有任务，避免内存泄漏
         if (hostTask != null) hostTask.cancelTask();
         if (commentsTask != null) commentsTask.cancelTask();
-        if (webView != null) {
-            webView.destroy(); // 销毁WebView，释放资源
+//        if (webView != null) {
+//            webView.destroy(); // 销毁WebView，释放资源
+//        }
+        if (player != null) {
+            player.release(); // 必须释放，避免内存泄漏
+            player = null;
         }
+        playerView = null;
         // 移除观察者（避免内存泄漏）
         WsManager.getInstance().removeOnMessageListener(this);
         // 关闭WebSocket连接
         WsManager.getInstance().disconnect();
+    }
+
+    // 自定义控制方法（不变）
+    public void playVideo() {
+        if (player != null && !player.isPlaying()) player.play();
+    }
+
+    public void pauseVideo() {
+        if (player != null && player.isPlaying()) player.pause();
+    }
+
+    public void switchVideoSource(String newVideoUrl) {
+        if (player != null) {
+            MediaItem newMediaItem = MediaItem.fromUri(newVideoUrl);
+            player.setMediaItem(newMediaItem);
+            player.prepare();
+            player.play();
+        }
+    }
+
+    public void seekVideo(long milliseconds) {
+        if (player != null) {
+            long newPosition = player.getCurrentPosition() + milliseconds;
+            player.seekTo(Math.max(0, Math.min(newPosition, player.getDuration())));
+        }
     }
 }

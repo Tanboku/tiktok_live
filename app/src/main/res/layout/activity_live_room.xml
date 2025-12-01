@@ -21,14 +21,24 @@
 <!--        app:layout_constraintEnd_toEndOf="parent" />-->
 
     <!-- 播放容器：占满整个屏幕 -->
-    <WebView
-        android:id="@+id/webview"
+<!--    <WebView-->
+<!--        android:id="@+id/webview"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="300dp"-->
+<!--        app:layout_constraintTop_toTopOf="parent"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        android:layout_marginTop="200dp"-->
+<!--        app:layout_constraintEnd_toEndOf="parent" />-->
+
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/player_view"
         android:layout_width="match_parent"
         android:layout_height="300dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         android:layout_marginTop="200dp"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        />
     <!-- 2. 左上角：主播信息（头像+名称+关注数） -->
 
     <androidx.constraintlayout.widget.ConstraintLayout

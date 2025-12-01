@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- 可选：硬件加速权限（提升渲染性能） -->
     <uses-feature android:name="android.hardware.opengl" android:required="false" />
     <!-- 网络状态权限 -->
