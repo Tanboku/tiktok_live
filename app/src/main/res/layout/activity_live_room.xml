@@ -10,16 +10,25 @@
     <!-- 1. 背景装饰层（紫色窗帘+纸花，用ImageView加载背景图） -->
     <!-- 半透明，避免遮挡前景 -->
     <!-- 核心：视频背景（占满整个屏幕，作为最底层） -->
-    <VideoView
-        android:id="@+id/vv_live_background"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_gravity="center"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+<!--    <VideoView-->
+<!--        android:id="@+id/vv_live_background"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="match_parent"-->
+<!--        android:layout_gravity="center"-->
+<!--        app:layout_constraintTop_toTopOf="parent"-->
+<!--        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent" />-->
 
+    <!-- 播放容器：占满整个屏幕 -->
+    <WebView
+        android:id="@+id/webview"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="200dp"
+        app:layout_constraintEnd_toEndOf="parent" />
     <!-- 2. 左上角：主播信息（头像+名称+关注数） -->
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -135,7 +144,7 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_comments"
         android:layout_width="match_parent"
-        android:layout_height="150dp"
+        android:layout_height="300dp"
         android:layout_marginHorizontal="16dp"
         android:layout_marginBottom="16dp"
         android:background="#80000000"

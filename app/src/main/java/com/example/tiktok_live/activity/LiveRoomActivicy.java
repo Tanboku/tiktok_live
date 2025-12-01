@@ -1,10 +1,14 @@
 package com.example.tiktok_live.activity;
 
+import android.content.Intent;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewTreeObserver;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -55,6 +59,7 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
 
     // 按钮
     private Button btnRefreshAll;
+    private ImageView btnreturn;
 
     // 新增：评论输入控件
     private EditText etCommentInput;
@@ -64,13 +69,14 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     private LoadDataAsyncTask hostTask;
     private LoadDataAsyncTask commentsTask;
     private SubmitCommentAsyncTask submitCommentTask;
+    private WebView webView;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_live_room);
-        // 1. 初始化视频背景（之前的代码，保持不变）
-        initVideoBackground();
+
         // 初始化控件
         initView();
         // 同时加载两个API数据
@@ -79,6 +85,9 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         WsManager.getInstance().addOnMessageListener(this);
         // 建立WebSocket连接
         WsManager.getInstance().connect();
+        // 1. 初始化视频背景（之前的代码，保持不变）
+        initVideoBackground();
+        setupNavigationListeners();
     }
 
 
@@ -94,6 +103,8 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         rvComments.setLayoutManager(new LinearLayoutManager(this));
         commentAdapter = new CommentAdapter(this, new ArrayList<>());
         rvComments.setAdapter(commentAdapter);
+
+        btnreturn = findViewById(R.id.iv_close);
 
         //发送文本消息
         WsManager.getInstance().sendText("1");
@@ -117,6 +128,18 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         if (newMsg!=null){
             tvOnlionineCount.setText((Integer.parseInt(tvOnlionineCount.getText().toString()) + 1) + "");
         }
+    }
+
+    private void setupNavigationListeners() {
+        btnreturn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 首页点击事件
+                Intent intent = new Intent(LiveRoomActivicy.this, MainActivity.class);
+                startActivity(intent);
+                finish();
+            }
+        });
     }
 
     /**
@@ -265,67 +288,105 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     }
 
     private void initVideoBackground() {
-        videoView = findViewById(R.id.vv_live_background);
-        Uri uri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.live_party_ing);
-        videoView.setVideoURI(uri);
+        // 绑定WebView
+        webView = findViewById(R.id.webview);
+        WebSettings webSettings = webView.getSettings();
 
-        videoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-            @Override
-            public void onPrepared(MediaPlayer mediaPlayer) {
-                // 1. 基础配置：循环+静音
-                mediaPlayer.setLooping(true);
-//                mediaPlayer.setVolume(0, 0);
-                // 2. 获取父布局（ConstraintLayout），等待其完成测量后再调整视频尺寸
-                View parentLayout = (View) videoView.getParent(); // 父布局是ConstraintLayout
-                parentLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-                    @Override
-                    public void onGlobalLayout() {
-                        // 监听一次后移除，避免重复触发
-                        parentLayout.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+        // --------------- 核心配置：确保无播放限制 ---------------
+        // 1. 允许JavaScript执行（必须，播放器基于JS开发）
+        webSettings.setJavaScriptEnabled(true);
 
-                        // 3. 获取父布局的实际宽高（此时已完成测量）
-                        int parentWidth = parentLayout.getWidth();
-                        int parentHeight = parentLayout.getHeight();
-                        if (parentWidth == 0 || parentHeight == 0) {
-                            return; // 异常情况直接返回
-                        }
+        // 2. 允许访问本地文件（加载assets中的脚本）
+        webSettings.setAllowFileAccess(true);
+        webSettings.setAllowFileAccessFromFileURLs(true);
+        webSettings.setAllowUniversalAccessFromFileURLs(true);
 
-                        // 4. 计算视频的宽高比
-                        int videoWidth = mediaPlayer.getVideoWidth();
-                        int videoHeight = mediaPlayer.getVideoHeight();
-                        float videoRatio = (float) videoWidth / videoHeight;
-                        float parentRatio = (float) parentWidth / parentHeight;
+        // 3. 允许跨域网络请求（访问DASH直播源）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            webSettings.setAllowFileAccessFromFileURLs(true);
+        }
 
-                        // 5. 创建 ConstraintLayout 的布局参数（父布局是ConstraintLayout，必须用对应LayoutParams）
-                        ConstraintLayout.LayoutParams videoParams = new ConstraintLayout.LayoutParams(
-                                ConstraintLayout.LayoutParams.WRAP_CONTENT,
-                                ConstraintLayout.LayoutParams.WRAP_CONTENT
-                        );
+        // 4. 启用硬件加速（提升视频渲染性能，避免卡顿）
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
-                        // 6. 根据宽高比调整视频尺寸（保持视频比例，避免拉伸）
-                        if (videoRatio > parentRatio) {
-                            // 视频更宽 → 宽度匹配父布局，高度按比例缩放
-                            videoParams.width = parentWidth;
-                            videoParams.height = (int) (parentWidth / videoRatio);
-                        } else {
-                            // 视频更高 → 高度匹配父布局，宽度按比例缩放
-                            videoParams.height = parentHeight;
-                            videoParams.width = (int) (parentHeight * videoRatio);
-                        }
+        // 5. 启用DOM存储（播放器依赖本地存储）
+        webSettings.setDomStorageEnabled(true);
+        webSettings.setDatabaseEnabled(true);
 
-                        // 7. 关键：设置视频在父布局中【水平+垂直居中】
-                        videoParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID; // 左对齐父布局
-                        videoParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;     // 右对齐父布局
-                        videoParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;     // 上对齐父布局
-                        videoParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID; // 下对齐父布局
+        // 6. 禁用缓存（避免旧脚本/配置干扰）
+        webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
 
-                        // 8. 应用布局参数并启动播放
-                        videoView.setLayoutParams(videoParams);
-                        videoView.start();
-                    }
-                });
-            }
-        });
+        // 7. 允许JS打开窗口（插件可能依赖）
+        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+
+        // 8. 调试模式（可选，Chrome可 inspect 调试）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            webView.setWebContentsDebuggingEnabled(true);
+        }
+
+        // --------------- 加载前端页面 ---------------
+        webView.loadUrl("file:///android_asset/player.html"); // 路径必须与assets目录对应
+//        videoView = findViewById(R.id.vv_live_background);
+//        Uri uri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.live_party_ing);
+//        videoView.setVideoURI(uri);
+//
+//        videoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+//            @Override
+//            public void onPrepared(MediaPlayer mediaPlayer) {
+//                // 1. 基础配置：循环+静音
+//                mediaPlayer.setLooping(true);
+////                mediaPlayer.setVolume(0, 0);
+//                // 2. 获取父布局（ConstraintLayout），等待其完成测量后再调整视频尺寸
+//                View parentLayout = (View) videoView.getParent(); // 父布局是ConstraintLayout
+//                parentLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+//                    @Override
+//                    public void onGlobalLayout() {
+//                        // 监听一次后移除，避免重复触发
+//                        parentLayout.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+//
+//                        // 3. 获取父布局的实际宽高（此时已完成测量）
+//                        int parentWidth = parentLayout.getWidth();
+//                        int parentHeight = parentLayout.getHeight();
+//                        if (parentWidth == 0 || parentHeight == 0) {
+//                            return; // 异常情况直接返回
+//                        }
+//
+//                        // 4. 计算视频的宽高比
+//                        int videoWidth = mediaPlayer.getVideoWidth();
+//                        int videoHeight = mediaPlayer.getVideoHeight();
+//                        float videoRatio = (float) videoWidth / videoHeight;
+//                        float parentRatio = (float) parentWidth / parentHeight;
+//
+//                        // 5. 创建 ConstraintLayout 的布局参数（父布局是ConstraintLayout，必须用对应LayoutParams）
+//                        ConstraintLayout.LayoutParams videoParams = new ConstraintLayout.LayoutParams(
+//                                ConstraintLayout.LayoutParams.WRAP_CONTENT,
+//                                ConstraintLayout.LayoutParams.WRAP_CONTENT
+//                        );
+//
+//                        // 6. 根据宽高比调整视频尺寸（保持视频比例，避免拉伸）
+//                        if (videoRatio > parentRatio) {
+//                            // 视频更宽 → 宽度匹配父布局，高度按比例缩放
+//                            videoParams.width = parentWidth;
+//                            videoParams.height = (int) (parentWidth / videoRatio);
+//                        } else {
+//                            // 视频更高 → 高度匹配父布局，宽度按比例缩放
+//                            videoParams.height = parentHeight;
+//                            videoParams.width = (int) (parentHeight * videoRatio);
+//                        }
+//
+//                        // 7. 关键：设置视频在父布局中【水平+垂直居中】
+//                        videoParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID; // 左对齐父布局
+//                        videoParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;     // 右对齐父布局
+//                        videoParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;     // 上对齐父布局
+//                        videoParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID; // 下对齐父布局
+//
+//                        // 8. 应用布局参数并启动播放
+//                        videoView.setLayoutParams(videoParams);
+//                        videoView.start();
+//                    }
+//                });
+//            }
+//        });
     }
 
     // ---------------------- 公屏聊天功能初始化（核心新增代码） ----------------------
@@ -384,16 +445,22 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     @Override
     protected void onPause() {
         super.onPause();
-        if (videoView.isPlaying()) {
-            videoView.pause();
+//        if (videoView.isPlaying()) {
+//            videoView.pause();
+//        }
+        if (webView != null) {
+            webView.onPause(); // 暂停播放
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (!videoView.isPlaying()) {
-            videoView.start();
+//        if (!videoView.isPlaying()) {
+//            videoView.start();
+//        }
+        if (webView != null) {
+            webView.onResume(); // 恢复播放
         }
     }
 
@@ -403,6 +470,9 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         // 取消所有任务，避免内存泄漏
         if (hostTask != null) hostTask.cancelTask();
         if (commentsTask != null) commentsTask.cancelTask();
+        if (webView != null) {
+            webView.destroy(); // 销毁WebView，释放资源
+        }
         // 移除观察者（避免内存泄漏）
         WsManager.getInstance().removeOnMessageListener(this);
         // 关闭WebSocket连接
