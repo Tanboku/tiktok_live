@@ -1,5 +1,6 @@
 package com.example.tiktok_live.activity;
 
+import android.content.Context;
 import android.content.Intent;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -19,6 +20,7 @@ import android.widget.VideoView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
@@ -28,12 +30,14 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.bytedance.rheatrace.RheaTrace3;
 import com.example.tiktok_live.R;
 import com.example.tiktok_live.adapter.CommentAdapter;
 import com.example.tiktok_live.asynctask.LoadDataAsyncTask;
 import com.example.tiktok_live.asynctask.SubmitCommentAsyncTask;
 import com.example.tiktok_live.model.Comment;
 import com.example.tiktok_live.model.URLContent;
+import com.example.tiktok_live.viewmodel.LiveRoomViewModel;
 import com.example.tiktok_live.websocket.MessageEvent;
 import com.example.tiktok_live.websocket.OnMessageListener;
 import com.example.tiktok_live.websocket.WsManager;
@@ -44,7 +48,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsyncTask.OnGetNetDataListener,
-        SubmitCommentAsyncTask.OnSubmitCommentListener, OnMessageListener {
+        SubmitCommentAsyncTask.OnSubmitCommentListener {
 
     private VideoView videoView;
     private RecyclerView rvChat;
@@ -79,27 +83,79 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     private PlayerView playerView;
     private ExoPlayer player;
     private static final String VIDEO_URL = "https://livesim2.dashif.org/livesim2/chunkdur_1/ato_7/testpic4_8s/Manifest300.mpd";
+    private LiveRoomViewModel viewModel;
 
-
+    @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(base);
+        // 当 enable_btrace=false 时集成的是 rhea-inhouse-noop，此时的 init() 方法里没有任何逻辑
+        RheaTrace3.init(base);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_live_room);
 
+        // 初始化 ViewModel
+        viewModel = new ViewModelProvider(this).get(LiveRoomViewModel.class);
+
         // 初始化控件
         initView();
+        // 注册观察者
+        observeData();
         // 同时加载两个API数据
         loadAllData();
         // 注册WebSocket观察者
-        WsManager.getInstance().addOnMessageListener(this);
+//        WsManager.getInstance().addOnMessageListener(this);
         // 建立WebSocket连接
-        WsManager.getInstance().connect();
+//        WsManager.getInstance().connect();
+        // 建立WebSocket连接（通过ViewModel）
+        viewModel.connectWebSocket();
         // 1. 初始化视频背景（之前的代码，保持不变）
         initVideoBackground();
         setupNavigationListeners();
     }
 
+    // 添加观察者方法
+    private void observeData() {
+        // 观察评论列表
+        viewModel.getCommentList().observe(this, comments -> {
+            if (comments != null) {
+                commentAdapter.updateData(comments);
+                rvComments.scrollToPosition(comments.size() - 1);
+            }
+        });
+
+        // 观察主播信息
+        viewModel.getHostInfo().observe(this, host -> {
+            if (host != null) {
+                showHostData(host);
+            }
+        });
+
+        // 观察错误信息
+        viewModel.getErrorMsg().observe(this, error -> {
+            if (error != null && !error.isEmpty()) {
+                Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // 观察在线人数
+        viewModel.getOnlineCount().observe(this, count -> {
+            if (count != null) {
+                tvOnlionineCount.setText(String.valueOf(count));
+            }
+        });
+
+        // 观察提交状态
+        viewModel.getIsSubmitting().observe(this, isSubmitting -> {
+            if (isSubmitting != null) {
+                btnSubmitComment.setEnabled(!isSubmitting);
+                btnSubmitComment.setText(isSubmitting ? "提交中..." : "提交评论");
+            }
+        });
+    }
 
     private void initView() {
         // 1. 初始化Host控件
@@ -135,13 +191,23 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     }
 
     // 接收WebSocket消息（主线程回调，可直接更新UI）
-    @Override
-    public void onMessageReceived(MessageEvent event) {
-        String newMsg = event.getMessage();
-        if (newMsg!=null){
-            tvOnlionineCount.setText((Integer.parseInt(tvOnlionineCount.getText().toString()) + 1) + "");
-        }
-    }
+//    @Override
+//    public void onMessageReceived(MessageEvent event) {
+//        String newMsg = event.getMessage();
+//        if (newMsg != null) {
+//            // 从UI控件中获取当前显示的人数
+//            String currentText = tvOnlionineCount.getText().toString();
+//            try {
+//                int currentCount = Integer.parseInt(currentText);
+//                int newCount = currentCount + 1;
+//                viewModel.setOnlineCount(newCount);
+//            } catch (NumberFormatException e) {
+//                // 如果解析失败，默认从12开始
+//                viewModel.setOnlineCount(13);
+//            }
+//        }
+////            tvOnlionineCount.setText((Integer.parseInt(tvOnlionineCount.getText().toString()) + 1) + "");
+//    }
 
     private void setupNavigationListeners() {
         btnreturn.setOnClickListener(new View.OnClickListener() {
@@ -164,12 +230,12 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         if (commentsTask != null) commentsTask.cancelTask();
 
         // 1. 加载Host API（传入标识TAG_HOST + URL）
-        hostTask = new LoadDataAsyncTask(this, this, true);
-        hostTask.execute(URLContent.TAG_HOST, URLContent.getHostInfoURL());
+//        hostTask = new LoadDataAsyncTask(this, this, true);
+//        hostTask.execute(URLContent.TAG_HOST, URLContent.getHostInfoURL());
 
         // 2. 加载Comments API（传入标识TAG_COMMENTS + URL）
-        commentsTask = new LoadDataAsyncTask(this, this, false); // 不重复显示加载框
-        commentsTask.execute(URLContent.TAG_COMMENTS, URLContent.getCommentsURL());
+//        commentsTask = new LoadDataAsyncTask(this, this, false); // 不重复显示加载框
+//        commentsTask.execute(URLContent.TAG_COMMENTS, URLContent.getCommentsURL());
     }
 
 
@@ -193,31 +259,34 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
             submitCommentTask.cancel(true);
         }
 
-        // 5. 执行提交任务
-        submitCommentTask = new SubmitCommentAsyncTask(this, new SubmitCommentAsyncTask.OnSubmitCommentListener() {
-            @Override
-            public void onSuccess(Comment newComment) {
-                // 恢复按钮状态
-                btnSubmitComment.setEnabled(true);
-                btnSubmitComment.setText("提交评论");
+        viewModel.submitComment(commentContent);
+        etCommentInput.setText("");
 
-                // 原有逻辑
-                commentAdapter.addComment(newComment);
-                rvComments.scrollToPosition(commentAdapter.getItemCount() - 1);
-                etCommentInput.setText("");
-                Toast.makeText(LiveRoomActivicy.this, "评论提交成功！", Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onFailure(String errorMsg) {
-                // 恢复按钮状态
-                btnSubmitComment.setEnabled(true);
-                btnSubmitComment.setText("提交评论");
-
-                Toast.makeText(LiveRoomActivicy.this, errorMsg, Toast.LENGTH_SHORT).show();
-            }
-        });
-        submitCommentTask.execute(commentContent);
+//        // 5. 执行提交任务
+//        submitCommentTask = new SubmitCommentAsyncTask(this, new SubmitCommentAsyncTask.OnSubmitCommentListener() {
+//            @Override
+//            public void onSuccess(Comment newComment) {
+//                // 恢复按钮状态
+//                btnSubmitComment.setEnabled(true);
+//                btnSubmitComment.setText("提交评论");
+//
+//                // 原有逻辑
+//                commentAdapter.addComment(newComment);
+//                rvComments.scrollToPosition(commentAdapter.getItemCount() - 1);
+//                etCommentInput.setText("");
+//                Toast.makeText(LiveRoomActivicy.this, "评论提交成功！", Toast.LENGTH_SHORT).show();
+//            }
+//
+//            @Override
+//            public void onFailure(String errorMsg) {
+//                // 恢复按钮状态
+//                btnSubmitComment.setEnabled(true);
+//                btnSubmitComment.setText("提交评论");
+//
+//                Toast.makeText(LiveRoomActivicy.this, errorMsg, Toast.LENGTH_SHORT).show();
+//            }
+//        });
+//        submitCommentTask.execute(commentContent);
     }
 
 
@@ -231,15 +300,15 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
             // 根据标识判断解析哪种数据
             if (URLContent.TAG_HOST.equals(apiTag)) {
                 // 解析Host单个对象
-                com.example.tiktok_live.model.Host host = gson.fromJson(json, com.example.tiktok_live.model.Host.class);
-                showHostData(host);
+//                com.example.tiktok_live.model.Host host = gson.fromJson(json, com.example.tiktok_live.model.Host.class);
+//                viewModel.setHostInfo(host); // 通过ViewModel更新数据
             } else if (URLContent.TAG_COMMENTS.equals(apiTag)) {
-                // 解析Comment数组
-                List<Comment> commentList = gson.fromJson(
-                        json,
-                        new TypeToken<List<Comment>>() {}.getType()
-                );
-                showCommentData(commentList);
+//                // 解析Comment数组
+//                List<Comment> commentList = gson.fromJson(
+//                        json,
+//                        new TypeToken<List<Comment>>() {}.getType()
+//                );
+//                viewModel.setCommentList(commentList); // 通过ViewModel更新数据
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -283,7 +352,7 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
 
     @Override
     public void onFailure(String errorMsg) {
-        Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
+        viewModel.setErrorMsg(errorMsg); // 通过ViewModel更新错误信息
     }
 
 
@@ -547,7 +616,7 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         }
         playerView = null;
         // 移除观察者（避免内存泄漏）
-        WsManager.getInstance().removeOnMessageListener(this);
+//        WsManager.getInstance().removeOnMessageListener(this);
         // 关闭WebSocket连接
         WsManager.getInstance().disconnect();
     }
