@@ -41,7 +41,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         btnLiveRoom = findViewById(R.id.live_button_text);
-        WsManager.getInstance();
 
 
         setupNavigationListeners();
@@ -81,42 +80,18 @@ public class MainActivity extends AppCompatActivity {
      */
     private void preloadWebSocketConnection() {
         try {
-            String webSocketUrl = URLContent.getWebSocketURL();
-            if (TextUtils.isEmpty(webSocketUrl)) {
-                Log.w(TAG, "WebSocket地址为空");
-                return;
+            // 确保 WsManager 被初始化，从而初始化 okHttpClient
+            WsManager wsManager = WsManager.getInstance();
+            OkHttpClient okHttpClient = WsManager.getOkHttpClient();
+
+            if (okHttpClient != null) {
+                // 可以进行预加载准备工作
+                Log.d("MainActivity_Preload", "WebSocket客户端初始化成功");
+            } else {
+                Log.e("MainActivity_Preload", "OkHttpClient实例为null");
             }
-
-            // 创建WebSocket请求（支持Token认证可添加header）
-            webSocketRequest = new Request.Builder()
-                    .url(webSocketUrl)
-                    .addHeader("Authorization", "Bearer " )
-                    .build();
-
-            // 建立WebSocket连接（回调在子线程，需切换UI线程更新状态）
-            preloadedWebSocket = okHttpClient.newWebSocket(webSocketRequest, new WebSocketListener() {
-                @Override
-                public void onOpen(WebSocket webSocket, Response response) {
-                    super.onOpen(webSocket, response);
-                    Log.d(TAG, "WebSocket预连接成功");
-                }
-
-                @Override
-                public void onMessage(WebSocket webSocket, String text) {
-                    super.onMessage(webSocket, text);
-                    // 预加载期间收到的实时消息（如新增评论）可缓存到CacheManager
-                    Log.d(TAG, "WebSocket预加载期间收到消息：" + text);
-                }
-
-                @Override
-                public void onFailure(WebSocket webSocket, Throwable t, Response response) {
-                    super.onFailure(webSocket, t, response);
-                    Log.e(TAG, "WebSocket预连接失败", t);
-                }
-            });
-
         } catch (Exception e) {
-            Log.e(TAG, "WebSocket预加载异常", e);
+            Log.e("MainActivity_Preload", "WebSocket预加载异常", e);
         }
     }
 

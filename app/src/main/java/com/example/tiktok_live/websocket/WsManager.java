@@ -21,11 +21,12 @@ public class WsManager {
     private static final String TAG = "WsManager";
     private static final String WS_URL = "wss://echo.websocket.org/"; // 公共回声测试服务器（发送啥返回啥）
     private static volatile WsManager instance; // 单例（双重校验锁）
-    private OkHttpClient okHttpClient;
+    private static OkHttpClient okHttpClient;
     private WebSocket webSocket;
     private final List<OnMessageListener> listeners = new CopyOnWriteArrayList<>(); // 线程安全的观察者列表
     private final Handler mainHandler = new Handler(Looper.getMainLooper()); // 主线程切换
 
+    private volatile boolean isConnected = false;
     // 私有构造函数（禁止外部实例化）
     private WsManager() {
         initOkHttpClient();
@@ -66,6 +67,7 @@ public class WsManager {
             public void onOpen(@NonNull WebSocket webSocket, @NonNull Response response) {
                 super.onOpen(webSocket, response);
                 WsManager.this.webSocket = webSocket;
+                isConnected = true; // 连接已建立
                 Log.i(TAG, "连接成功");
             }
 
@@ -96,12 +98,14 @@ public class WsManager {
             public void onClosed(@NonNull WebSocket webSocket, int code, @NonNull String reason) {
                 super.onClosed(webSocket, code, reason);
                 Log.i(TAG, "连接已关闭：code=" + code + ", reason=" + reason);
+                isConnected = false; // 连接已关闭
                 WsManager.this.webSocket = null;
             }
 
             @Override
             public void onFailure(@NonNull WebSocket webSocket, @NonNull Throwable t, Response response) {
                 super.onFailure(webSocket, t, response);
+                isConnected = false; // 连接失败
                 Log.e(TAG, "连接失败：" + t.getMessage(), t);
                 WsManager.this.webSocket = null;
                 // 简单重连（可选，原教程下一篇讲重连，这里简化）
@@ -158,5 +162,13 @@ public class WsManager {
                 listener.onMessageReceived(event);
             }
         });
+    }
+
+    public static OkHttpClient getOkHttpClient() {
+        return okHttpClient;
+    }
+
+    public boolean isConnected() {
+        return isConnected;
     }
 }

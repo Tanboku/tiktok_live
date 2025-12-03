@@ -36,8 +36,11 @@ import com.example.tiktok_live.adapter.CommentAdapter;
 import com.example.tiktok_live.asynctask.LoadDataAsyncTask;
 import com.example.tiktok_live.asynctask.SubmitCommentAsyncTask;
 import com.example.tiktok_live.model.Comment;
+import com.example.tiktok_live.model.Host;
 import com.example.tiktok_live.model.URLContent;
 import com.example.tiktok_live.plugin.LikePlugin;
+import com.example.tiktok_live.utils.LiveRoomCacheManager;
+import com.example.tiktok_live.utils.LiveRoomCacheManager.LiveRoomCache;
 import com.example.tiktok_live.viewmodel.LiveRoomViewModel;
 import com.example.tiktok_live.websocket.MessageEvent;
 import com.example.tiktok_live.websocket.OnMessageListener;
@@ -51,6 +54,8 @@ import java.util.List;
 public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsyncTask.OnGetNetDataListener,
         SubmitCommentAsyncTask.OnSubmitCommentListener {
 
+    private LiveRoomCacheManager cacheManager; // 新增：缓存管理器
+    private boolean isRestoredFromCache = false; // 新增：是否从缓存恢复
     private VideoView videoView;
     private RecyclerView rvChat;
     private EditText etComment;
@@ -101,6 +106,8 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_live_room);
 
+        cacheManager = LiveRoomCacheManager.getInstance();
+
         // 初始化 ViewModel
         viewModel = new ViewModelProvider(this).get(LiveRoomViewModel.class);
         // 初始化 LikePlugin
@@ -109,18 +116,28 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
 
         // 初始化控件
         initView();
-        // 注册观察者
-        observeData();
-        // 同时加载两个API数据
-        loadAllData();
+
+        LiveRoomCache cache = cacheManager.getValidCache();
+        if (cache != null) {
+            // 有有效缓存，恢复状态
+            restoreFromCache(cache);
+            isRestoredFromCache = true;
+        } else {
+            // 无缓存/缓存过期，正常初始化
+            isRestoredFromCache = false;
+            // 注册观察者
+            observeData();
+            // 同时加载两个API数据
+            loadAllData();
+            // 建立WebSocket连接（通过ViewModel）
+            viewModel.connectWebSocket();
+            // 初始化视频背景
+            initVideoBackground();
+        }
         // 注册WebSocket观察者
 //        WsManager.getInstance().addOnMessageListener(this);
         // 建立WebSocket连接
 //        WsManager.getInstance().connect();
-        // 建立WebSocket连接（通过ViewModel）
-        viewModel.connectWebSocket();
-        // 1. 初始化视频背景（之前的代码，保持不变）
-        initVideoBackground();
         setupNavigationListeners();
     }
 
@@ -244,6 +261,95 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
                 Intent intent = new Intent(LiveRoomActivicy.this, MainActivity.class);
                 startActivity(intent);
                 finish();
+            }
+        });
+    }
+
+    /**
+     * 新增：从缓存恢复直播间状态
+     */
+    private void restoreFromCache(LiveRoomCache cache) {
+        Toast.makeText(this, "从缓存快速恢复", Toast.LENGTH_SHORT).show();
+
+        // 1. 恢复主播信息
+        if (cache.getHostInfo() != null) {
+            showHostData(cache.getHostInfo());
+        }
+
+        // 2. 恢复评论列表
+        if (cache.getCommentList() != null && !cache.getCommentList().isEmpty()) {
+            commentAdapter.updateData(cache.getCommentList());
+            rvComments.scrollToPosition(cache.getCommentList().size() - 1);
+        }
+
+        // 3. 恢复在线人数
+        tvOnlionineCount.setText(String.valueOf(cache.getOnlineCount()));
+
+        // 4. 恢复点赞数
+        tvLikeCount.setText(String.valueOf(cache.getLikeCount()));
+        if (likePlugin != null) {
+            likePlugin.setTotalLikes(cache.getLikeCount()); // 需要LikePlugin添加setter方法
+        }
+
+        // 5. 恢复评论输入框内容
+        etCommentInput.setText(cache.getCommentInputContent());
+
+        // 6. 恢复播放器状态（重新初始化播放器，但恢复进度和播放状态）
+        initVideoBackgroundWithCache(cache);
+
+        // 7. 恢复WebSocket连接（检查连接状态，无效则重新连接）
+        if (!WsManager.getInstance().isConnected()) {
+            viewModel.connectWebSocket();
+        }
+    }
+
+    /**
+     * 新增：带缓存恢复的播放器初始化
+     */
+    private void initVideoBackgroundWithCache(LiveRoomCache cache) {
+        // 初始化 ExoPlayer
+        player = new ExoPlayer.Builder(this)
+                .setHandleAudioBecomingNoisy(true)
+                .build();
+        playerView.setPlayer(player);
+
+        // 设置缓存的媒体地址
+        MediaItem mediaItem = MediaItem.fromUri(cache.getVideoUrl());
+        player.setMediaItem(mediaItem);
+
+        // 预加载并恢复进度
+        player.prepare();
+        player.seekTo(cache.getPlayPosition()); // 恢复播放进度
+
+        // 恢复播放状态
+        if (cache.isPlaying()) {
+            player.play();
+        } else {
+            player.pause();
+        }
+
+        // 播放器监听（与原有一致）
+        player.addListener(new Player.Listener() {
+            @Override
+            public void onPlaybackStateChanged(int playbackState) {
+                switch (playbackState) {
+                    case Player.STATE_BUFFERING:
+                        Toast.makeText(LiveRoomActivicy.this, "缓冲中...", Toast.LENGTH_SHORT).show();
+                        break;
+                    case Player.STATE_READY:
+                        // 已恢复进度，无需自动播放（按缓存状态决定）
+                        break;
+                    case Player.STATE_ENDED:
+                        Toast.makeText(LiveRoomActivicy.this, "播放完成", Toast.LENGTH_SHORT).show();
+                        player.seekTo(0);
+                        break;
+                }
+            }
+
+            @Override
+            public void onPlayerError(PlaybackException error) {
+                String errorMsg = "播放失败：" + error.getMessage();
+                Toast.makeText(LiveRoomActivicy.this, errorMsg, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -642,6 +748,15 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        // 新增：保存状态到缓存（仅正常退出时缓存）
+        if (!isFinishing() || isRestoredFromCache) {
+            // 异常销毁/已从缓存恢复，不重复缓存
+            cacheManager.clearCache();
+        } else {
+            saveToCache();
+        }
+
         // 取消所有任务，避免内存泄漏
         if (hostTask != null) hostTask.cancelTask();
         if (commentsTask != null) commentsTask.cancelTask();
@@ -657,6 +772,49 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
 //        WsManager.getInstance().removeOnMessageListener(this);
         // 关闭WebSocket连接
         WsManager.getInstance().disconnect();
+
+        // 新增：如果缓存已过期，清理缓存
+        if (cacheManager.getValidCache() == null) {
+            cacheManager.clearCache();
+        }
+    }
+
+    /**
+     * 新增：保存当前状态到缓存
+     */
+    private void saveToCache() {
+        try {
+            // 1. 收集播放器状态
+            String videoUrl = VIDEO_URL; // 固定地址，若动态则需存储实际地址
+            long playPosition = 0;
+            boolean isPlaying = false;
+            if (player != null) {
+                playPosition = player.getCurrentPosition(); // 播放进度
+                isPlaying = player.isPlaying(); // 是否在播放
+            }
+
+            // 2. 收集页面数据
+            Host hostInfo = viewModel.getHostInfo().getValue(); // 主播信息
+            List<Comment> commentList = commentAdapter.getCommentList(); // 评论列表（需Adapter添加getter）
+            int onlineCount = 0;
+            try {
+                onlineCount = Integer.parseInt(tvOnlionineCount.getText().toString().trim());
+            } catch (Exception e) {
+                onlineCount = 0;
+            }
+            int likeCount = Integer.parseInt(tvLikeCount.getText().toString().trim()); // 点赞数
+            String commentInputContent = etCommentInput.getText().toString().trim(); // 输入框内容
+
+            // 3. 存入缓存
+            cacheManager.putCache(
+                    videoUrl, playPosition, isPlaying,
+                    hostInfo, commentList, onlineCount,
+                    likeCount, commentInputContent
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+            cacheManager.clearCache(); // 保存失败则清空缓存
+        }
     }
 
     // 自定义控制方法（不变）

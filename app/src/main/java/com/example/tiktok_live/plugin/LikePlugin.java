@@ -90,4 +90,11 @@ public class LikePlugin extends BasePlugin {
         Integer likes = totalLikes.getValue();
         return likes != null ? likes : 0;
     }
+
+    // 在 LikePlugin 中添加：
+    public void setTotalLikes(int likes) {
+        if (this.totalLikes != null) {
+            this.totalLikes.setValue(likes);
+        }
+    }
 }

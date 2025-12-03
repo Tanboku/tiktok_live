@@ -102,4 +102,8 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             tvContent = itemView.findViewById(R.id.tv_comment_content);
         }
     }
+
+    public List<Comment> getCommentList() {
+        return commentList;
+    }
 }
