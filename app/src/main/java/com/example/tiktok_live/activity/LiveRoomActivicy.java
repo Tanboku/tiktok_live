@@ -37,6 +37,7 @@ import com.example.tiktok_live.asynctask.LoadDataAsyncTask;
 import com.example.tiktok_live.asynctask.SubmitCommentAsyncTask;
 import com.example.tiktok_live.model.Comment;
 import com.example.tiktok_live.model.URLContent;
+import com.example.tiktok_live.plugin.LikePlugin;
 import com.example.tiktok_live.viewmodel.LiveRoomViewModel;
 import com.example.tiktok_live.websocket.MessageEvent;
 import com.example.tiktok_live.websocket.OnMessageListener;
@@ -83,6 +84,10 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     private ExoPlayer player;
     private static final String VIDEO_URL = "https://livesim2.dashif.org/livesim2/chunkdur_1/ato_7/testpic4_8s/Manifest300.mpd";
     private LiveRoomViewModel viewModel;
+    // 添加 LikePlugin 成员变量
+    private LikePlugin likePlugin;
+    private ImageView btnLike;
+    private TextView tvLikeCount;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -98,6 +103,9 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
 
         // 初始化 ViewModel
         viewModel = new ViewModelProvider(this).get(LiveRoomViewModel.class);
+        // 初始化 LikePlugin
+        likePlugin = new LikePlugin();
+        likePlugin.onInit(getApplication());
 
         // 初始化控件
         initView();
@@ -154,6 +162,15 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
                 btnSubmitComment.setText(isSubmitting ? "提交中..." : "提交评论");
             }
         });
+
+        // 观察点赞数变化
+        if (likePlugin != null) {
+            likePlugin.getTotalLikes().observe(this, likes -> {
+                if (likes != null) {
+                    tvLikeCount.setText(String.valueOf(likes));
+                }
+            });
+        }
     }
 
     private void initView() {
@@ -186,6 +203,17 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         btnSubmitComment.setOnClickListener(v -> submitComment());
 
         playerView = findViewById(R.id.player_view);
+
+        // 初始化点赞相关控件
+        btnLike = findViewById(R.id.btn_like);
+        tvLikeCount = findViewById(R.id.tv_like_count);
+
+        // 设置点赞按钮点击事件
+        btnLike.setOnClickListener(v -> {
+            if (likePlugin.like()) {
+                // 点赞成功，可以添加动画效果
+            }
+        });
 
     }
 
@@ -569,7 +597,18 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     @Override
     protected void onStart() {
         super.onStart();
+        if (likePlugin != null) {
+            likePlugin.onActivate(this);
+        }
     }
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (likePlugin != null) {
+            likePlugin.onDeactivate(this);
+        }
+    }
+
 
     @Override
     protected void onPause() {
