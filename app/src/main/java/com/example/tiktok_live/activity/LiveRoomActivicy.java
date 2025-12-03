@@ -56,7 +56,6 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     private Button btnSend;
     private CommentAdapter commentAdapter;
     private List<Comment> commentList = new ArrayList<>(); // 评论数据源
-
     // Host相关控件
     private ImageView ivHostAvatar;
     private TextView tvHostName;
