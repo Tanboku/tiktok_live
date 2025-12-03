@@ -47,52 +47,65 @@ import com.example.tiktok_live.websocket.OnMessageListener;
 import com.example.tiktok_live.websocket.WsManager;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-
 import java.util.ArrayList;
 import java.util.List;
+
+/**
+ * 直播间主界面Activity
+ *
+ * 功能包括：
+ * - 视频播放（使用ExoPlayer）
+ * - 实时聊天评论展示与发送
+ * - 主播信息展示
+ * - 在线人数统计
+ * - 点赞功能
+ * - 数据缓存机制
+ * - WebSocket实时通信
+ */
 
 public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsyncTask.OnGetNetDataListener,
         SubmitCommentAsyncTask.OnSubmitCommentListener {
 
-    private LiveRoomCacheManager cacheManager; // 新增：缓存管理器
-    private boolean isRestoredFromCache = false; // 新增：是否从缓存恢复
-    private VideoView videoView;
+    // 缓存管理器，用于保存和恢复直播间状态
+    private LiveRoomCacheManager cacheManager;
+    // 标识是否从缓存恢复状态
+    private boolean isRestoredFromCache = false;
     private RecyclerView rvChat;
     private EditText etComment;
     private Button btnSend;
-    private CommentAdapter commentAdapter;
+    private CommentAdapter commentAdapter; // 评论适配器
     private List<Comment> commentList = new ArrayList<>(); // 评论数据源
     // Host相关控件
-    private ImageView ivHostAvatar;
-    private TextView tvHostName;
+    private ImageView ivHostAvatar;         // 主播头像
+    private TextView tvHostName;            // 主播名称
     private TextView tvHostRoom;
-    private TextView tvOnlionineCount;
+    private TextView tvOnlionineCount;     // 在线人数显示
 
     // Comment列表相关控件
-    private RecyclerView rvComments;
+    private RecyclerView rvComments;        // 评论列表
 
     // 按钮
     private Button btnRefreshAll;
     private ImageView btnreturn;
 
-    // 新增：评论输入控件
-    private EditText etCommentInput;
-    private Button btnSubmitComment;
+    // 评论输入控件
+    private EditText etCommentInput;        // 评论输入框
+    private Button btnSubmitComment;        // 提交评论按钮
 
-    // 异步任务（两个API各一个，或共用一个，这里用两个更清晰）
-    private LoadDataAsyncTask hostTask;
-    private LoadDataAsyncTask commentsTask;
-    private SubmitCommentAsyncTask submitCommentTask;
+    // 异步任务
+    private LoadDataAsyncTask hostTask;     // 加载主播信息任务
+    private LoadDataAsyncTask commentsTask; // 加载评论列表任务
+    private SubmitCommentAsyncTask submitCommentTask; // 提交评论任务
     private WebView webView;
 
-    private PlayerView playerView;
-    private ExoPlayer player;
-    private static final String VIDEO_URL = "https://livesim2.dashif.org/livesim2/chunkdur_1/ato_7/testpic4_8s/Manifest300.mpd";
+    private PlayerView playerView;           // ExoPlayer播放器视图
+    private ExoPlayer player;               // ExoPlayer实例
+    private static final String VIDEO_URL = "https://livesim2.dashif.org/livesim2/chunkdur_1/ato_7/testpic4_8s/Manifest300.mpd"; // 默认视频流地址
     private LiveRoomViewModel viewModel;
     // 添加 LikePlugin 成员变量
-    private LikePlugin likePlugin;
-    private ImageView btnLike;
-    private TextView tvLikeCount;
+    private LikePlugin likePlugin;         // 点赞插件
+    private ImageView btnLike;              // 点赞按钮
+    private TextView tvLikeCount;           // 点赞数量显示
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -101,6 +114,15 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         RheaTrace3.init(base);
     }
 
+    /**
+     * Activity创建时调用
+     *
+     * 执行流程：
+     * 1. 初始化基础组件和ViewModel
+     * 2. 检查是否有有效缓存，如果有则从缓存恢复状态
+     * 3. 如果没有缓存，则正常初始化数据和连接
+     * 4. 设置各种监听器
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -141,7 +163,17 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         setupNavigationListeners();
     }
 
-    // 添加观察者方法
+    /**
+     * 注册ViewModel数据观察者
+     *
+     * 观察的数据包括：
+     * - 评论列表变化
+     * - 主播信息更新
+     * - 错误信息提示
+     * - 在线人数变化
+     * - 提交状态变化
+     * - 点赞数变化
+     */
     private void observeData() {
         // 观察评论列表
         viewModel.getCommentList().observe(this, comments -> {
@@ -190,6 +222,17 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         }
     }
 
+    /**
+     * 初始化界面控件
+     *
+     * 包括：
+     * - 主播信息展示控件
+     * - 评论列表控件
+     * - 评论输入控件
+     * - 视频播放控件
+     * - 点赞功能控件
+     * - 返回按钮
+     */
     private void initView() {
         // 1. 初始化Host控件
         ivHostAvatar = findViewById(R.id.iv_host_avatar);
@@ -205,8 +248,10 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
 
         btnreturn = findViewById(R.id.iv_close);
 
-        //发送文本消息
-        WsManager.getInstance().sendText("1");
+        //仅在不是从缓存恢复的情况下发送文本消息
+        if (!isRestoredFromCache) {
+            WsManager.getInstance().sendText("1");
+        }
 
         // 3. 初始化刷新按钮
 //        btnRefreshAll = findViewById(R.id.btn_refresh_all);
@@ -250,7 +295,7 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
 //                viewModel.setOnlineCount(13);
 //            }
 //        }
-////            tvOnlionineCount.setText((Integer.parseInt(tvOnlionineCount.getText().toString()) + 1) + "");
+//            tvOnlionineCount.setText((Integer.parseInt(tvOnlionineCount.getText().toString()) + 1) + "");
 //    }
 
     private void setupNavigationListeners() {
@@ -266,7 +311,18 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     }
 
     /**
-     * 新增：从缓存恢复直播间状态
+     * 从缓存恢复直播间状态
+     *
+     * 恢复的内容包括：
+     * - 主播信息
+     * - 评论列表
+     * - 在线人数
+     * - 点赞数
+     * - 评论输入框内容
+     * - 视频播放状态和进度
+     * - WebSocket连接状态
+     *
+     * @param cache 缓存的数据对象
      */
     private void restoreFromCache(LiveRoomCache cache) {
         Toast.makeText(this, "从缓存快速恢复", Toast.LENGTH_SHORT).show();
@@ -372,7 +428,15 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     }
 
 
-    // 新增：提交评论逻辑（优化重复提交）
+    /**
+     * 提交评论
+     *
+     * 处理流程：
+     * 1. 验证输入内容是否为空
+     * 2. 防止重复提交（禁用按钮）
+     * 3. 调用ViewModel提交评论
+     * 4. 清空输入框
+     */
     private void submitComment() {
         // 1. 获取输入内容
         String commentContent = etCommentInput.getText().toString().trim();
@@ -489,7 +553,7 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     }
 
 
-    // 新增：提交评论成功回调（实现OnSubmitCommentListener）
+    // 提交评论成功回调
     @Override
     public void onSuccess(Comment newComment) {
         // 1. 追加评论到列表
@@ -646,7 +710,7 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
 //        });
     }
 
-    // ---------------------- 公屏聊天功能初始化（核心新增代码） ----------------------
+    // ---------------------- 公屏聊天功能初始化 ----------------------
     private void initChatFunction() {
         // 绑定控件
         rvChat = findViewById(R.id.rv_comments);
@@ -699,7 +763,7 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         etComment.setText("");
     }
 
-    // 生命周期管理（不变，确保资源释放）
+    // 生命周期管理（确保资源释放）
     @Override
     protected void onStart() {
         super.onStart();
@@ -749,7 +813,7 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     protected void onDestroy() {
         super.onDestroy();
 
-        // 新增：保存状态到缓存（仅正常退出时缓存）
+        // 保存状态到缓存（仅正常退出时缓存）
         if (!isFinishing() || isRestoredFromCache) {
             // 异常销毁/已从缓存恢复，不重复缓存
             cacheManager.clearCache();
@@ -780,7 +844,7 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
     }
 
     /**
-     * 新增：保存当前状态到缓存
+     * 保存当前状态到缓存
      */
     private void saveToCache() {
         try {
@@ -817,7 +881,7 @@ public class LiveRoomActivicy extends AppCompatActivity implements LoadDataAsync
         }
     }
 
-    // 自定义控制方法（不变）
+    // 自定义控制方法
     public void playVideo() {
         if (player != null && !player.isPlaying()) player.play();
     }
